@@ -10,6 +10,8 @@
 #include "ext_time.h"
 #include "ext_itm.h"
 
+#include "js_interp.h"
+
 ////////////////////////// object struct
 typedef struct _printr
 {

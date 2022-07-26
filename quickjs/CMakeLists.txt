@@ -8,6 +8,7 @@ include_directories(
 	"${MAX_SDK_INCLUDES}"
 	"${MAX_SDK_MSP_INCLUDES}"
 	"${MAX_SDK_JIT_INCLUDES}"
+  "/usr/local/include/quickjs"
 )
 
 file(GLOB PROJECT_SRC
