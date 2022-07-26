@@ -10,14 +10,17 @@
 #include "ext_time.h"
 #include "ext_itm.h"
 
-#include "js_interp.h"
+#include "quickjs.h"
+
+#include "qjs_interp.h"
 
 ////////////////////////// object struct
 typedef struct _quickjs
 {
 	t_object	ob;
     t_object    *time_obj;
-	void		*out;
+    qjs_interp   *qjs;
+    void		*out;
 } t_quickjs;
 
 /// next we see if we can create a self generating
