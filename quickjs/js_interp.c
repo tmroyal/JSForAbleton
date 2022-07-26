@@ -6,3 +6,11 @@
 //
 
 #include "js_interp.h"
+
+void create_interp(){
+    printf("hello world");
+}
+
+void destroy_interp(){
+    printf("hello world");
+}
