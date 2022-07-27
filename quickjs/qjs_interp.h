@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 #include "string.h"
+#include "ext.h"
+#include "ext_obex.h"
 
 #include "quickjs.h"
 #include "quickjs-libc.h"
@@ -19,15 +21,25 @@ typedef struct _qjs_interp {
     JSContext *ctx;
 } qjs_interp;
 
+/*
+ Bellard uses global variables in
+ quickjs-libc when setting up a JS
+ function. Be like Bellard!
+ */
+t_object* glob_obj;
+
 void create_interp(qjs_interp*  interp);
 void destroy_interp(qjs_interp* interp);
+void set_glob_obj(t_object* obj);
 
-void setup_console(
-        qjs_interp* interp,
-        JSCFunction*  log,
-        JSCFunction*  error,
-        JSCFunction*  warn
-);
+JSValue interp_code(qjs_interp* interp, const char* code);
+
+void setup_console( qjs_interp* interp );
+
+JSValue con_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+JSValue con_warn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+JSValue con_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
+JSValue post_val(JSContext *ctx, int argc, JSValueConst *argv, void (*post_func)(t_object *, C74_CONST char *, ...));
 
 
 #endif /* js_interp_h */
