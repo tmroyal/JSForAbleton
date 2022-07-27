@@ -33,7 +33,7 @@ JSValue con_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
 JSValue interp_code(qjs_interp* interp, const char* code){
     // TODO: handle errors
     int len = (int)strlen(code);
-    return JS_Eval(ctx, code, len, "<none>", JS_EVAL_TYPE_GLOBAL);
+    return JS_Eval(interp->ctx, code, len, "<none>", JS_EVAL_TYPE_GLOBAL);
 }
 
 
