@@ -2,4 +2,3 @@ quickjs/**
 !quickjs/*.c
 !quickjs/*.h
 !quickjs/CmakeLists.txt
-!quickjs/quickjs.xcodeproj

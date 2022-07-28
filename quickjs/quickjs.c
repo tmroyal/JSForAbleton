@@ -61,7 +61,11 @@ void quickjs_assist(t_quickjs *x, void *b, long m, long a, char *s)
 
 void quickjs_anything(t_quickjs *x, t_symbol *s, long ac, t_atom *av)
 {
-    post("anything");
+    JSValue result = interp_code(x->qjs, "console.log('hello world', 'im here')");
+    result = interp_code(x->qjs, "console.error('hello world')");
+    result = interp_code(x->qjs, "console.warn('hello world')");
+    
+    //if (JS_IsError(x->qjs->ctx, result)){}
 }
 
 void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
@@ -71,8 +75,9 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     
     x = (t_quickjs *)object_alloc(quickjs_class);
     
-    create_interp(x->qjs);;
+    x->qjs = create_interp();
     set_glob_obj((t_object*)x);
+    setup_console(x->qjs);
     
 	return (x);
 }

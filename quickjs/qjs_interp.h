@@ -28,7 +28,7 @@ typedef struct _qjs_interp {
  */
 t_object* glob_obj;
 
-void create_interp(qjs_interp*  interp);
+qjs_interp *create_interp();
 void destroy_interp(qjs_interp* interp);
 void set_glob_obj(t_object* obj);
 
