@@ -34,9 +34,9 @@ JSValue con_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     return post_val(ctx, argc, argv, object_error);
 }
 
-JSValue interp_code(qjs_interp* interp, const char* code){
+JSValue interp_code(qjs_interp* interp, const char* code, int len){
     // TODO: handle errors
-    int len = (int)strlen(code);
+    if (len <= 0){ len = (int)strlen(code); }
     return JS_Eval(interp->ctx, code, len, "<none>", JS_EVAL_TYPE_GLOBAL);
 }
 

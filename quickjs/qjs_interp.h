@@ -32,7 +32,7 @@ qjs_interp *create_interp();
 void destroy_interp(qjs_interp* interp);
 void set_glob_obj(t_object* obj);
 
-JSValue interp_code(qjs_interp* interp, const char* code);
+JSValue interp_code(qjs_interp* interp, const char* code, int len);
 
 void setup_console( qjs_interp* interp );
 
