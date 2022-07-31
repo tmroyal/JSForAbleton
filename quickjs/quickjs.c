@@ -1,6 +1,6 @@
 /**
 	@file
-	printr - just like print
+	quickjs - just like print
 
 	@ingroup	examples
 */
@@ -10,13 +10,18 @@
 #include "ext_time.h"
 #include "ext_itm.h"
 
+#include "quickjs.h"
+
+#include "qjs_interp.h"
+
 ////////////////////////// object struct
-typedef struct _printr
+typedef struct _quickjs
 {
 	t_object	ob;
-    t_object    *time_obj;
-	void		*out;
-} t_printr;
+    qjs_interp   *qjs;
+    t_object *editor;
+    void		*out;
+} t_quickjs;
 
 /// next we see if we can create a self generating
 /// stream of ticks
@@ -25,72 +30,82 @@ typedef struct _printr
 
 ///////////////////////// function prototypes
 //// standard set
-void *printr_new(t_symbol *s, long argc, t_atom *argv);
-void printr_assist(t_printr *x, void *b, long m, long a, char *s);
-void printr_free(t_printr *x);
-void printr_tick(t_printr *x);
-void printr_anything(t_printr *x, t_symbol *s, long ac, t_atom *av);
+void *quickjs_new(t_symbol *s, long argc, t_atom *argv);
+void quickjs_assist(t_quickjs *x, void *b, long m, long a, char *s);
+void quickjs_free(t_quickjs *x);
+void quickjs_anything(t_quickjs *x, t_symbol *s, long ac, t_atom *av);
+void quickjs_dblclick(t_quickjs *x);
+void quickjs_edclose(t_quickjs *x, char **ht, long size);
+
 
 //////////////////////// global class pointer variable
-void *printr_class;
+void *quickjs_class;
 
 void ext_main(void *r)
 {
 	t_class *c;
-
-    c = class_new("printr", (method)printr_new, (method)printr_free,
-                  sizeof(t_printr), 0L, 0);
-
-	class_addmethod(c, (method)printr_anything,		"anything",	A_GIMME, 0);
-	class_addmethod(c, (method)printr_assist,			"assist",		A_CANT, 0);
     
-    class_time_addattr(c, "delaytime", "Delay Time", TIME_FLAGS_TICKSONLY | TIME_FLAGS_USECLOCK | TIME_FLAGS_TRANSPORT);
+    c = class_new("quickjs", (method)quickjs_new, (method)quickjs_free,
+                  sizeof(t_quickjs), 0L, 0);
+
+	class_addmethod(c, (method)quickjs_anything,		"anything",	A_GIMME, 0);
+	class_addmethod(c, (method)quickjs_assist,			"assist",		A_CANT, 0);
+    class_addmethod(c, (method)quickjs_dblclick,            "dblclick",        A_CANT, 0);
+    class_addmethod(c, (method)quickjs_edclose, "edclose", A_CANT, 0);
     
 	class_register(CLASS_BOX, c);
-	printr_class = c;
+    quickjs_class = c;
+}
+
+void quickjs_dblclick(t_quickjs *x){
+    if (!x->editor){
+        x->editor = object_new(CLASS_NOBOX, gensym("jed") ,(t_object*) x, 0);
+        object_attr_setsym(x->editor, gensym("title"), gensym("crazytext"));
+    } else {
+        object_attr_setchar(x->editor, gensym("visible"), 1);
+    }
+}
+
+void quickjs_edclose(t_quickjs *x, char **ht, long size)
+{
+    JSValue result = interp_code(x->qjs, *ht, size);
+    post("done");
+    // do something with the text
+    x->editor = NULL;
 }
 
 
-void printr_assist(t_printr *x, void *b, long m, long a, char *s)
+void quickjs_assist(t_quickjs *x, void *b, long m, long a, char *s)
 {
 	if (m == ASSIST_INLET) { //inlet
         sprintf(s, "Does nothing");
 	}
 }
 
-void printr_anything(t_printr *x, t_symbol *s, long ac, t_atom *av)
+void quickjs_anything(t_quickjs *x, t_symbol *s, long ac, t_atom *av)
 {
-    post("anything");
+    JSValue result = interp_code(x->qjs, "console.log('hello world', 'im here')", -1);
+    result = interp_code(x->qjs, "console.error('hello world')", -1);
+    result = interp_code(x->qjs, "console.warn('hello world')", -1);
+    
+    //if (JS_IsError(x->qjs->ctx, result)){}
 }
 
-void printr_tick(t_printr *x){
-    // TODO: post transport
-    double n1, n2;
-    double ticks;
-    
-    time_getphase(x->time_obj, &n1, &n2, &ticks);
-    
-    post("ticks: %f", ticks);
-    time_schedule(x->time_obj, NULL);
-}
-
-void *printr_new(t_symbol *s, long argc, t_atom *argv)
+void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 {
-	t_printr *x = NULL;
+	t_quickjs *x = NULL;
     t_atom a;
     
-    x = (t_printr *)object_alloc(printr_class);
+    x = (t_quickjs *)object_alloc(quickjs_class);
     
-    x->time_obj = (t_object *) time_new((t_object*)x, NULL, (method)printr_tick, TIME_FLAGS_TICKSONLY | TIME_FLAGS_USECLOCK);
-    
-    atom_setsym(&a, gensym("1n"));
-    time_setvalue(x->time_obj, NULL, 1, &a);
-    
-    time_schedule(x->time_obj, NULL);
+    x->qjs = create_interp();
+    x->editor = NULL;
+    set_glob_obj((t_object*)x);
+    setup_console(x->qjs);
     
 	return (x);
 }
 
-void printr_free(t_printr *x){
-    freeobject(x->time_obj);
+void quickjs_free(t_quickjs *x){
+    destroy_interp(x->qjs);
 }
