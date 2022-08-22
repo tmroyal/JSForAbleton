@@ -19,8 +19,13 @@ typedef struct _quickjs
 {
 	t_object	ob;
     qjs_interp   *qjs;
-    t_object *editor;
-    void		*out;
+    char filename[MAX_PATH_CHARS];
+    char fqn[MAX_PATH_CHARS];
+    char **code;
+    long code_size;
+    bool code_loaded;
+    short path;
+    void *filewatcher;
 } t_quickjs;
 
 /// next we see if we can create a self generating
@@ -28,14 +33,23 @@ typedef struct _quickjs
 /// - with an attr
 /// - without an attr
 
+
 ///////////////////////// function prototypes
 //// standard set
 void *quickjs_new(t_symbol *s, long argc, t_atom *argv);
 void quickjs_assist(t_quickjs *x, void *b, long m, long a, char *s);
 void quickjs_free(t_quickjs *x);
-void quickjs_anything(t_quickjs *x, t_symbol *s, long ac, t_atom *av);
-void quickjs_dblclick(t_quickjs *x);
-void quickjs_edclose(t_quickjs *x, char **ht, long size);
+void quickjs_interpret(t_quickjs *x, t_symbol *s);
+void quickjs_opendefault(t_quickjs *x);
+void quickjs_watch(t_quickjs *x, t_symbol* cmd, long argc, t_atom* argv);
+void quickjs_filechanged(t_quickjs* x, char *filename, short path);
+
+void read_file(t_quickjs *x, t_symbol* filename_s);
+short set_path(t_quickjs *x, t_symbol* filename_s, short *outpath);
+void set_fqn(t_quickjs *x);
+short load_file(t_quickjs *x, t_symbol* filename_s, short path);
+void set_watcher(t_quickjs *x, int status);
+void filechange(t_quickjs *x, t_symbol* s, short c, t_atom *v);
 
 
 //////////////////////// global class pointer variable
@@ -46,66 +60,195 @@ void ext_main(void *r)
 	t_class *c;
     
     c = class_new("quickjs", (method)quickjs_new, (method)quickjs_free,
-                  sizeof(t_quickjs), 0L, 0);
+                  sizeof(t_quickjs), 0L, A_GIMME, 0);
 
-	class_addmethod(c, (method)quickjs_anything,		"anything",	A_GIMME, 0);
-	class_addmethod(c, (method)quickjs_assist,			"assist",		A_CANT, 0);
-    class_addmethod(c, (method)quickjs_dblclick,            "dblclick",        A_CANT, 0);
-    class_addmethod(c, (method)quickjs_edclose, "edclose", A_CANT, 0);
+	class_addmethod(c, (method)quickjs_assist, "assist", A_CANT, 0);
+    class_addmethod(c, (method)quickjs_interpret, "interp", A_DEFSYM, 0);
+    class_addmethod(c, (method)quickjs_opendefault, "open", 0);
+    class_addmethod(c, (method)quickjs_opendefault, "dblclick", 0);
+    class_addmethod(c, (method)quickjs_watch, "watch", A_GIMME, 0);
+    class_addmethod(c, (method)quickjs_filechanged, "filechanged", A_CANT, 0);
     
 	class_register(CLASS_BOX, c);
     quickjs_class = c;
 }
 
-void quickjs_dblclick(t_quickjs *x){
-    if (!x->editor){
-        x->editor = object_new(CLASS_NOBOX, gensym("jed") ,(t_object*) x, 0);
-        object_attr_setsym(x->editor, gensym("title"), gensym("crazytext"));
+void quickjs_opendefault(t_quickjs *x){
+#ifdef MAC_VERSION
+    char format[] = "open \"%s\"";
+#else
+    char format[] = "start \"%s\"";
+#endif
+    char cmnd[MAX_PATH_CHARS+20];
+    
+    if (strlen(x->fqn)){
+        sprintf(cmnd, format, x->fqn);
+        system(cmnd);
     } else {
-        object_attr_setchar(x->editor, gensym("visible"), 1);
+        object_post((t_object*)x, "Could not get path");
     }
 }
 
-void quickjs_edclose(t_quickjs *x, char **ht, long size)
-{
-    JSValue result = interp_code(x->qjs, *ht, size);
-    post("done");
-    // do something with the text
-    x->editor = NULL;
+
+void quickjs_interpret(t_quickjs *x, t_symbol* s){
+    int hasFileArg = strlen(s->s_name);
+    JSValue result;
+    
+    post("Trying");
+    
+    if (!hasFileArg){
+        if (x->code_loaded){
+            result = interp_code(x->qjs, *(x->code), x->code_size);
+        } else {
+            object_warn((t_object*)x, "Cannot interpret: no code");
+        }
+    } else {
+        defer((t_object*)x, (method)read_file, s, 0, NULL);
+    }
+    
+}
+
+void quickjs_filechanged(t_quickjs* x, char *filename, short path){
+    defer((t_object*)x, (method)filechange, gensym("NULL"), 0, NULL);
+}
+
+void filechange(t_quickjs *x, t_symbol* s, short c, t_atom *v){
+    JSValue result;
+    
+    post("FC TRY");
+    
+    if (load_file(x, gensym(x->filename), x->path)){
+        x->code_size = strlen(*(x->code));
+        result = interp_code(x->qjs, *(x->code), x->code_size);
+    } else {
+        object_error((t_object*)x, "Error reloading file");
+    }
+}
+
+void quickjs_watch(t_quickjs *x, t_symbol* cmd, long argc, t_atom* argv){
+    if (argc > 1){
+        object_error((t_object*)x, "Too many args for watch. Watch only accepts, at more, one arg.");
+        return;
+    } else if (argc == 1){
+        if (atom_gettype(argv) != A_LONG){
+            object_error((t_object*)x, "Watch only allows int args");
+            return;
+        }
+        set_watcher(x, atom_getlong(argv));
+    } else {
+        set_watcher(x, 1);
+    }
+}
+
+void set_watcher(t_quickjs *x, int status){
+    if (status && x->filewatcher == NULL){
+        x->filewatcher = filewatcher_new((t_object*)x, x->path, x->filename);
+        filewatcher_start(x->filewatcher);
+    } else if (!status && x->filewatcher != NULL){
+        filewatcher_stop(x->filewatcher);
+        object_free(x->filewatcher);
+        x->filewatcher = NULL;
+    }
 }
 
 
 void quickjs_assist(t_quickjs *x, void *b, long m, long a, char *s)
 {
-	if (m == ASSIST_INLET) { //inlet
+    if (m == ASSIST_INLET) { //inlet
         sprintf(s, "Does nothing");
 	}
 }
 
-void quickjs_anything(t_quickjs *x, t_symbol *s, long ac, t_atom *av)
-{
-    JSValue result = interp_code(x->qjs, "console.log('hello world', 'im here')", -1);
-    result = interp_code(x->qjs, "console.error('hello world')", -1);
-    result = interp_code(x->qjs, "console.warn('hello world')", -1);
+
+short set_path(t_quickjs *x, t_symbol* filename_s, short* outpath){
+    char filename[MAX_PATH_CHARS];
+    short not_success, op;
+    t_fourcc outtype;
+    strncpy_zero(filename, filename_s->s_name, strlen(filename_s->s_name)+1);
     
-    //if (JS_IsError(x->qjs->ctx, result)){}
+    not_success = locatefile_extended(filename, &op, &outtype, NULL, 0);
+    if (not_success){
+        return 0;
+    } else {
+        (*outpath) = op;
+        return 1;
+    }
+}
+
+void set_fqn(t_quickjs *x){
+    char abssyspath[MAX_PATH_CHARS];
+    
+    path_toabsolutesystempath(x->path, x->filename, abssyspath);
+    path_nameconform(abssyspath, x->fqn, PATH_STYLE_NATIVE, PATH_TYPE_PATH);
+}
+
+short load_file(t_quickjs *x, t_symbol* filename_s, short path){
+    t_filehandle fh;
+    
+    if (path_opensysfile(filename_s->s_name, x->path, &fh, READ_PERM)){
+        object_error((t_object*)x, "error opening %s", filename_s->s_name);
+        return;
+    }
+    
+    x->code = sysmem_newhandle(0);
+    sysfile_readtextfile(fh, x->code, 0, TEXT_NULL_TERMINATE);
+    sysfile_close(fh);
+    return 1;
+}
+
+void read_file(t_quickjs *x, t_symbol* filename_s){
+    short success, path;
+    int loadInd;
+    char fqn[MAX_PATH_CHARS];
+    
+    JSValue result;
+    
+    // TODO: consider placing this in the file load func
+    if (x->code_loaded){
+        sysmem_freehandle(x->code);
+        x->code_loaded = false;
+        x->code_size = 0;
+        x->path = 0;
+        x->filename[0] = '\0';
+        x->fqn[0] = '\0';
+    }
+    
+    success = set_path(x, filename_s, &path);
+    
+    if (success && load_file(x, filename_s, &path)){
+        strncpy_zero(x->filename, filename_s->s_name, strlen(filename_s->s_name)+1);
+        x->code_loaded = true;
+        x->code_size = strlen(*(x->code));
+        x->path = path;
+        
+        set_fqn(x); // side effect sets fqn
+        
+        result = interp_code(x->qjs, *(x->code), x->code_size);
+    }
 }
 
 void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 {
 	t_quickjs *x = NULL;
-    t_atom a;
     
     x = (t_quickjs *)object_alloc(quickjs_class);
     
+    x->code_loaded = false;
     x->qjs = create_interp();
-    x->editor = NULL;
     set_glob_obj((t_object*)x);
     setup_console(x->qjs);
+    
+    if (argc > 0 && argv[0].a_type == A_SYM){
+        defer((t_object*)x, (method)read_file, atom_getsym(&argv[0]), 0, NULL);
+    }
     
 	return (x);
 }
 
 void quickjs_free(t_quickjs *x){
     destroy_interp(x->qjs);
+    if (x->code_loaded){
+        set_watcher(x, 0);
+        sysmem_freehandle(x->code);
+    }
 }

@@ -13,8 +13,8 @@ qjs_interp* create_interp(){
     
     interp->rt = JS_NewRuntime();
     interp->ctx = JS_NewContext(interp->rt);
-    post("Interp: %d\n", interp->rt == NULL);
-    post("Interp: %d\n", interp->ctx == NULL);
+    //post("Interp: %d\n", interp->rt == NULL);
+    //post("Interp: %d\n", interp->ctx == NULL);
     
     return interp;
 }
