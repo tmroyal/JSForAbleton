@@ -11,22 +11,11 @@
 #include "ext_itm.h"
 
 #include "quickjs.h"
+#include "qjs_struct.h"
 
 #include "qjs_interp.h"
 
 ////////////////////////// object struct
-typedef struct _quickjs
-{
-	t_object	ob;
-    qjs_interp   *qjs;
-    char filename[MAX_PATH_CHARS];
-    char fqn[MAX_PATH_CHARS];
-    char **code;
-    long code_size;
-    bool code_loaded;
-    short path;
-    void *filewatcher;
-} t_quickjs;
 
 /// next we see if we can create a self generating
 /// stream of ticks
@@ -98,7 +87,7 @@ void quickjs_interpret(t_quickjs *x, t_symbol* s){
     
     if (!hasFileArg){
         if (x->code_loaded){
-            result = interp_code(x->qjs, *(x->code), x->code_size);
+            result = interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
         } else {
             object_warn((t_object*)x, "Cannot interpret: no code");
         }
@@ -119,7 +108,7 @@ void filechange(t_quickjs *x, t_symbol* s, short c, t_atom *v){
     
     if (load_file(x, gensym(x->filename), x->path)){
         x->code_size = strlen(*(x->code));
-        result = interp_code(x->qjs, *(x->code), x->code_size);
+        result = interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
     } else {
         object_error((t_object*)x, "Error reloading file");
     }
@@ -223,7 +212,7 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
         
         set_fqn(x); // side effect sets fqn
         
-        result = interp_code(x->qjs, *(x->code), x->code_size);
+        result = interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
     }
 }
 
@@ -234,9 +223,7 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     x = (t_quickjs *)object_alloc(quickjs_class);
     
     x->code_loaded = false;
-    x->qjs = create_interp();
-    set_glob_obj((t_object*)x);
-    setup_console(x->qjs);
+    x->qjs = (struct qjs_interp*) create_interp();
     
     if (argc > 0 && argv[0].a_type == A_SYM){
         defer((t_object*)x, (method)read_file, atom_getsym(&argv[0]), 0, NULL);
@@ -246,7 +233,7 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 }
 
 void quickjs_free(t_quickjs *x){
-    destroy_interp(x->qjs);
+    destroy_interp((qjs_interp*)x->qjs);
     if (x->code_loaded){
         set_watcher(x, 0);
         sysmem_freehandle(x->code);

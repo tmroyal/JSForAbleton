@@ -12,11 +12,41 @@ qjs_interp* create_interp(){
     if (interp == NULL){ return; }
     
     interp->rt = JS_NewRuntime();
-    interp->ctx = JS_NewContext(interp->rt);
+    interp->ctx = NULL;
     //post("Interp: %d\n", interp->rt == NULL);
     //post("Interp: %d\n", interp->ctx == NULL);
     
     return interp;
+}
+
+JSValue interp_code(t_quickjs* obj, qjs_interp* interp, const char* code, int len){
+    JSValue res;
+    if (len <= 0){ len = (int)strlen(code); }
+    setup_context(obj, interp);
+    res = JS_Eval(interp->ctx, code, len, "<none>", JS_EVAL_TYPE_GLOBAL);
+    
+    if (JS_IsException(res)){
+        print_exception(interp);
+    }
+    
+    return res;
+}
+
+void print_exception(qjs_interp* interp){
+    JSValueConst exception;
+    const char * er;
+    t_object* obj = (t_object*) JS_GetContextOpaque(interp->ctx);
+    
+    exception = JS_GetException(interp->ctx);
+    er = JS_ToCString(interp->ctx, exception);
+    if (er){
+        object_error(obj, er);
+        JS_FreeCString(interp->ctx, er);
+    } else {
+        object_error(obj, "Error");
+    }
+    
+    JS_FreeValue(interp->ctx, exception);
 }
 
 JSValue con_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv){
@@ -34,18 +64,9 @@ JSValue con_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst 
     return post_val(ctx, argc, argv, object_error);
 }
 
-JSValue interp_code(qjs_interp* interp, const char* code, int len){
-    // TODO: handle errors
-    if (len <= 0){ len = (int)strlen(code); }
-    return JS_Eval(interp->ctx, code, len, "<none>", JS_EVAL_TYPE_GLOBAL);
-}
-
-/*
-    Based on js_print from quickjs-libc.
-    Be like Bellard!
- */
 JSValue post_val(JSContext *ctx, int argc, JSValueConst *argv, void (*post_func)(t_object *, C74_CONST char *, ...)){
     
+    t_object* obj = (t_object*)JS_GetContextOpaque(ctx);
     int i;
     const char *str;
     size_t len;
@@ -55,7 +76,7 @@ JSValue post_val(JSContext *ctx, int argc, JSValueConst *argv, void (*post_func)
         if (!str){
             return JS_EXCEPTION;
         }
-        (*post_func)(glob_obj, str);
+        (*post_func)(obj, str);
         JS_FreeCString(ctx, str);
     }
     return JS_UNDEFINED;
@@ -78,12 +99,34 @@ void setup_console( qjs_interp* interp){
     JS_FreeValue(interp->ctx, this);
 }
 
-void set_glob_obj(t_object* x){
-    glob_obj = x;
+void setup_context(t_quickjs* obj, qjs_interp* interp){
+    if (interp->ctx != NULL){ JS_FreeContext(interp->ctx); }
+    interp->ctx = JS_NewContext(interp->rt);
+    JS_SetContextOpaque(interp->ctx, (void*)obj);
+    
+    setup_console(interp);
+    setup_outlet(interp);
+}
+
+JSValue setup_outlet(qjs_interp* interp){
+    JSValue this;
+    
+    this = JS_GetGlobalObject(interp->ctx);
+    
+    JS_SetPropertyStr(interp->ctx, this, "outlet",
+                   JS_NewCFunction(interp->ctx, outlet, "outlet", 1));
+    JS_FreeValue(interp->ctx, this);
+}
+                   
+JSValue outlet(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv){
+    JSValue bear;
+    t_quickjs* obj = (t_quickjs*) JS_GetContextOpaque(ctx);
+    object_post((t_object*)obj, "%d", argc);
+    return bear;
 }
 
 void destroy_interp(qjs_interp* interp){
-    JS_FreeContext(interp->ctx);
+    if (interp->ctx != NULL){ JS_FreeContext(interp->ctx); }
     JS_FreeRuntime(interp->rt);
     free(interp);
 }
