@@ -16,6 +16,7 @@
 #include "quickjs.h"
 #include "quickjs-libc.h"
 #include "qjs_struct.h"
+#include "JSValueToTAtom.h"
 
 
 typedef struct _qjs_interp {
@@ -28,6 +29,7 @@ qjs_interp *create_interp();
 void destroy_interp(qjs_interp* interp);
 
 JSValue interp_code(t_quickjs* obj, qjs_interp* interp, const char* code, int len);
+void outlet_single(t_quickjs* obj, t_atom value);
 
 JSValue setup_outlet(qjs_interp* interp);
 void setup_console(qjs_interp* interp );

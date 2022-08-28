@@ -21,6 +21,7 @@ typedef struct _quickjs
     bool code_loaded;
     short path;
     void *filewatcher;
+    void *outlet;
 } t_quickjs;
 
 #endif /* qjs_struct_h */

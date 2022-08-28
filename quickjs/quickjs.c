@@ -35,7 +35,7 @@ void quickjs_filechanged(t_quickjs* x, char *filename, short path);
 
 void read_file(t_quickjs *x, t_symbol* filename_s);
 short set_path(t_quickjs *x, t_symbol* filename_s, short *outpath);
-void set_fqn(t_quickjs *x);
+void set_fqn(t_quickjs *x); // fully qualified name
 short load_file(t_quickjs *x, t_symbol* filename_s, short path);
 void set_watcher(t_quickjs *x, int status);
 void filechange(t_quickjs *x, t_symbol* s, short c, t_atom *v);
@@ -83,8 +83,7 @@ void quickjs_interpret(t_quickjs *x, t_symbol* s){
     int hasFileArg = strlen(s->s_name);
     JSValue result;
     
-    post("Trying");
-    
+    // TODO: interpret should reload existing file, not simply reinterpret code
     if (!hasFileArg){
         if (x->code_loaded){
             result = interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
@@ -103,8 +102,6 @@ void quickjs_filechanged(t_quickjs* x, char *filename, short path){
 
 void filechange(t_quickjs *x, t_symbol* s, short c, t_atom *v){
     JSValue result;
-    
-    post("FC TRY");
     
     if (load_file(x, gensym(x->filename), x->path)){
         x->code_size = strlen(*(x->code));
@@ -224,6 +221,7 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     
     x->code_loaded = false;
     x->qjs = (struct qjs_interp*) create_interp();
+    x->outlet = outlet_new((t_object*)x, NULL);
     
     if (argc > 0 && argv[0].a_type == A_SYM){
         defer((t_object*)x, (method)read_file, atom_getsym(&argv[0]), 0, NULL);

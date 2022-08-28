@@ -119,10 +119,50 @@ JSValue setup_outlet(qjs_interp* interp){
 }
                    
 JSValue outlet(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv){
-    JSValue bear;
+    JSValue none;
+    t_atom atoms[argc];
+    
+    none = JS_UNDEFINED;
+    
     t_quickjs* obj = (t_quickjs*) JS_GetContextOpaque(ctx);
-    object_post((t_object*)obj, "%d", argc);
-    return bear;
+    
+    if (argc == 0){
+        object_error((t_object*)obj, "outlet() requires at least one argument");
+        return none;
+    }
+    
+    for (int i = 0; i < argc; i++){
+        atoms[i] = JSValueToAtom(ctx, argv[i]);
+    }
+    
+    if (atoms[0].a_type == A_LONG || atoms[0].a_type == A_FLOAT){
+        if (argc == 1){
+            outlet_single(obj, atoms[0]);
+        } else {
+            outlet_list(obj->outlet, NULL, argc, atoms);
+        }
+    } else if (atoms[0].a_type == A_SYM){
+        if (argc == 1){
+            outlet_anything(obj->outlet, atom_getsym(&atoms[0]), 0, NULL);
+            
+        } else {
+            outlet_anything(obj->outlet, atom_getsym(&atoms[0]), argc-1, atoms+1);
+        }
+    } else {
+        outlet_anything(obj->outlet, gensym("Error: unexpected type"), 0, NULL);
+    }
+
+    return none;
+}
+
+void outlet_single(t_quickjs* obj, t_atom value){
+    t_symbol *type;
+    if (value.a_type == A_LONG){
+        type = gensym("int");
+    } else {
+        type = gensym("float");
+    }
+    outlet_anything(obj->outlet, type, 1, &value);
 }
 
 void destroy_interp(qjs_interp* interp){
