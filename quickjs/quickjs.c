@@ -81,12 +81,11 @@ void quickjs_opendefault(t_quickjs *x){
 
 void quickjs_interpret(t_quickjs *x, t_symbol* s){
     int hasFileArg = strlen(s->s_name);
-    JSValue result;
     
     // TODO: interpret should reload existing file, not simply reinterpret code
     if (!hasFileArg){
-        if (x->code_loaded){
-            result = interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
+        if (x->filename){
+            defer((t_object*)x, (method)read_file, gensym(x->filename), 0, NULL);
         } else {
             object_warn((t_object*)x, "Cannot interpret: no code");
         }
