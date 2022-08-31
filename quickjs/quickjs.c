@@ -11,9 +11,10 @@
 #include "ext_itm.h"
 
 #include "quickjs.h"
-#include "qjs_struct.h"
 
+#include "qjs_struct.h"
 #include "qjs_interp.h"
+#include "functionSchedule.h"
 
 ////////////////////////// object struct
 
