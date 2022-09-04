@@ -37,19 +37,85 @@ void resizeSchedule(functionSchedule* fs, size_t new_size){
 
 
 void insertFunction(functionSchedule *fs, JSValue function, event_time time){
-    size_t index;
+    size_t index, i;
+    
+    index = getInsertionIndex(fs, time);
     
     fs->n_events++;
     if(fs->capacity < fs->n_events){
         resizeSchedule(fs, fs->capacity*2);
     }
-        
-    index = getInsertionIndex(fs, time);
+    
+    for (i = fs->n_events - 1; i > index; i--){
+        fs->sEvents[i+1] = fs->sEvents[i];
+    }
+    fs->sEvents[index].function = &function;
+    fs->sEvents[index].time = time;
 }
 
-// binary search
+bool time_lt(event_time self, event_time other, event_resolution res){
+    switch (res){
+        case ER_TICKS:
+            return self.tick < other.tick;
+            break;
+        case ER_SECONDS:
+            return self.seconds < other.seconds;
+            break;
+    }
+}
+
+bool time_gt(event_time self, event_time other, event_resolution res){
+    switch (res){
+        case ER_TICKS:
+            return self.tick > other.tick;
+            break;
+        case ER_SECONDS:
+            return self.seconds > other.seconds;
+            break;
+    }
+}
+
+bool time_eq(event_time self, event_time other, event_resolution res){
+    switch (res){
+        case ER_TICKS:
+            return self.tick == other.tick;
+            break;
+        case ER_SECONDS:
+            return self.seconds == other.seconds;
+            break;
+    }
+    
+}
+
+
 size_t getInsertionIndex(functionSchedule *fs, event_time time){
     // Start here
-    //size_t index = fs->nE
+    size_t low = 0;
+    size_t high = fs->n_events - 1;
+    size_t mid;
+    
+    event_time m_time;
+    
+    // binary search
+    do {
+        mid = (low+high)/2;
+        m_time = fs->sEvents[mid].time;
+        if (time_eq(time, m_time, fs->resolution)){
+            return mid;
+        } else if (time_gt(time, m_time, fs->resolution)){
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    } while (low != high);
+    
+    mid = low;
+    m_time = fs->sEvents[mid].time;
+    
+    if (time_lt(time, m_time, fs->resolution)){
+        return mid;
+    } else {
+        return mid+1;
+    }
 }
 

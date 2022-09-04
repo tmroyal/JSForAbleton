@@ -12,12 +12,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "quickjs.h"
 
 typedef enum er { ER_TICKS, ER_SECONDS } event_resolution;
 
 typedef union et {
-    uint32_t ticket;
+    uint32_t tick;
     double seconds;
 } event_time;
 
@@ -39,11 +40,17 @@ void freeFunctionSchedule(functionSchedule* fsp);
 void resizeSchedule(functionSchedule* fs, size_t new_size);
 void insertFunction(functionSchedule *fs, JSValue function, event_time time);
 size_t getInsertionIndex(functionSchedule *fs, event_time time);
+bool time_gt(event_time self, event_time other, event_resolution res);
+bool time_lt_eq(event_time self, event_time other, event_resolution res);
 
 // insert via binary search
 
 // get events, passing in event pointer and number events
 // remove events before n
 // we do not need to free the sEvent, but may need to free the JSValue
+
+// JS_Call
+// JS_FreeValue
+// JS_Invoke
 
 #endif /* functionSchedule_h */
