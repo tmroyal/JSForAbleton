@@ -6,19 +6,11 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../../max-sdk-base/script/max-pretarget.cmak
 # MAX EXTERNAL
 #############################################################
 
-include_directories( 
-	"${MAX_SDK_INCLUDES}"
-	"${MAX_SDK_MSP_INCLUDES}"
-	"${MAX_SDK_JIT_INCLUDES}"
-  "/usr/local/include/quickjs"
-)
-
 file(GLOB PROJECT_SRC
 		"[!test_]*.h"
 		"[!test_]*.c"
 		"*.cpp"
 )
-
 
 add_library( 
 	${PROJECT_NAME} 
@@ -26,8 +18,19 @@ add_library(
 	${PROJECT_SRC}
 )
 
+target_include_directories( 
+	${PROJECT_NAME}
+	PRIVATE
+	"${MAX_SDK_INCLUDES}"
+	"${MAX_SDK_MSP_INCLUDES}"
+	"${MAX_SDK_JIT_INCLUDES}"
+  "/usr/local/include/quickjs"
+)
+
 find_library(QJS_LOC NAMES quickjs/libquickjs.a)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${QJS_LOC})
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../max-sdk-base/script/max-posttarget.cmake)
 
 add_executable(TestFS 
 	test_functionSchedule.c
@@ -36,5 +39,4 @@ add_executable(TestFS
 	functionSchedule.h
 )
 target_link_libraries(TestFS PRIVATE ${QJS_LOC})
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/../../max-sdk-base/script/max-posttarget.cmake)
+target_include_directories(TestFS PRIVATE "/usr/local/include/quickjs")

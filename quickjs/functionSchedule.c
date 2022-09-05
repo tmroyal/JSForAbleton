@@ -23,6 +23,10 @@ void freeFunctionSchedule(functionSchedule* fsp){
 }
 
 void resizeSchedule(functionSchedule* fs, size_t new_size){
+    if (new_size < fs->capacity){
+        printf("WARNING: CANNOT DECREASE SIZE OF FS: ignoring\n");
+        return;
+    }
     fs->capacity = new_size;
     sEvent* newSEvents = malloc(sizeof(sEvent)*new_size);
     
@@ -35,7 +39,6 @@ void resizeSchedule(functionSchedule* fs, size_t new_size){
     fs->sEvents = newSEvents;
 }
 
-
 void insertFunction(functionSchedule *fs, JSValue function, event_time time){
     size_t index, i;
     
@@ -47,7 +50,7 @@ void insertFunction(functionSchedule *fs, JSValue function, event_time time){
     }
     
     for (i = fs->n_events - 1; i > index; i--){
-        fs->sEvents[i+1] = fs->sEvents[i];
+        fs->sEvents[i] = fs->sEvents[i-1];
     }
     fs->sEvents[index].function = &function;
     fs->sEvents[index].time = time;
@@ -56,7 +59,7 @@ void insertFunction(functionSchedule *fs, JSValue function, event_time time){
 bool time_lt(event_time self, event_time other, event_resolution res){
     switch (res){
         case ER_TICKS:
-            return self.tick < other.tick;
+            return self.ticks < other.ticks;
             break;
         case ER_SECONDS:
             return self.seconds < other.seconds;
@@ -67,7 +70,7 @@ bool time_lt(event_time self, event_time other, event_resolution res){
 bool time_gt(event_time self, event_time other, event_resolution res){
     switch (res){
         case ER_TICKS:
-            return self.tick > other.tick;
+            return self.ticks > other.ticks;
             break;
         case ER_SECONDS:
             return self.seconds > other.seconds;
@@ -78,7 +81,7 @@ bool time_gt(event_time self, event_time other, event_resolution res){
 bool time_eq(event_time self, event_time other, event_resolution res){
     switch (res){
         case ER_TICKS:
-            return self.tick == other.tick;
+            return self.ticks == other.ticks;
             break;
         case ER_SECONDS:
             return self.seconds == other.seconds;
@@ -86,6 +89,15 @@ bool time_eq(event_time self, event_time other, event_resolution res){
     }
     
 }
+
+#ifdef DEBUG
+void printTimes(functionSchedule* fs){
+    for (int i = 0; i < fs->n_events; i++){
+        printf("%d ", fs->sEvents[i].time.ticks);
+    }
+    printf("");
+}
+#endif
 
 
 size_t getInsertionIndex(functionSchedule *fs, event_time time){
@@ -95,6 +107,8 @@ size_t getInsertionIndex(functionSchedule *fs, event_time time){
     size_t mid;
     
     event_time m_time;
+    
+    if (fs->n_events == 0){ return 0; }
     
     // binary search
     do {
@@ -107,7 +121,7 @@ size_t getInsertionIndex(functionSchedule *fs, event_time time){
         } else {
             high = mid - 1;
         }
-    } while (low != high);
+    } while (low < high);
     
     mid = low;
     m_time = fs->sEvents[mid].time;

@@ -18,7 +18,7 @@
 typedef enum er { ER_TICKS, ER_SECONDS } event_resolution;
 
 typedef union et {
-    uint32_t tick;
+    uint32_t ticks;
     double seconds;
 } event_time;
 
@@ -41,9 +41,14 @@ void resizeSchedule(functionSchedule* fs, size_t new_size);
 void insertFunction(functionSchedule *fs, JSValue function, event_time time);
 size_t getInsertionIndex(functionSchedule *fs, event_time time);
 bool time_gt(event_time self, event_time other, event_resolution res);
-bool time_lt_eq(event_time self, event_time other, event_resolution res);
+bool time_lt(event_time self, event_time other, event_resolution res);
+bool time_eq(event_time self, event_time other, event_resolution res);
 
-// insert via binary search
+
+#ifdef DEBUG
+void printTimes(functionSchedule* fs);
+#endif
+
 
 // get events, passing in event pointer and number events
 // remove events before n
