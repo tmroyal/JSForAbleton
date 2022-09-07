@@ -13,12 +13,14 @@ functionSchedule* createFunctionSchedule(size_t init_size, event_resolution
     newFS->n_events = 0;
     newFS->capacity = init_size;
     newFS->resolution = resolution;
+    newFS->outputs = malloc(sizeof(sEvent)*MAX_OUTPUT_EVENTS);
     resizeSchedule(newFS, init_size);
     return newFS;
 }
 
 void freeFunctionSchedule(functionSchedule* fsp){
     free(fsp->sEvents);
+    free(fsp->outputs);
     free(fsp);
 }
 
@@ -39,6 +41,7 @@ void resizeSchedule(functionSchedule* fs, size_t new_size){
     fs->sEvents = newSEvents;
 }
 
+// TODO: optimize this
 void insertFunction(functionSchedule *fs, JSValue function, event_time time){
     size_t index, i;
     
@@ -87,7 +90,10 @@ bool time_eq(event_time self, event_time other, event_resolution res){
             return self.seconds == other.seconds;
             break;
     }
-    
+}
+
+bool time_lteq(event_time self, event_time other, event_resolution res){
+    return time_lt(self, other, res) || time_eq(self, other, res);
 }
 
 #ifdef DEBUG
@@ -131,5 +137,32 @@ size_t getInsertionIndex(functionSchedule *fs, event_time time){
     } else {
         return mid+1;
     }
+}
+
+void pop(functionSchedule *fs, event_time cur_time, size_t *n_events){
+    size_t n_ev_match = 0;
+    sEvent* testEv = fs->sEvents + 1;
+    
+    // increment i based on conditions
+    while (n_ev_match < fs->n_events &&
+           time_lteq(fs->sEvents[n_ev_match].time, cur_time, fs->resolution))
+    {
+        n_ev_match++;
+    }
+
+    if (n_ev_match >= MAX_OUTPUT_EVENTS){
+        (*n_events) = MAX_OUTPUT_EVENTS;
+    } else {
+        (*n_events) = n_ev_match;
+    }
+
+    if (n_ev_match == 0){ return NULL; }
+    
+    // copy number of events to the output, discard excess
+    memcpy(fs->outputs, fs->sEvents, sizeof(sEvent)*(*n_events));
+    
+    // move non matching to beginning of array
+    fs->n_events -= n_ev_match;
+    memmove(fs->sEvents, fs->sEvents + n_ev_match, sizeof(sEvent)*fs->n_events);
 }
 

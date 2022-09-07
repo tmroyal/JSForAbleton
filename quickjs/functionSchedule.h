@@ -10,9 +10,13 @@
 #ifndef functionSchedule_h
 #define functionSchedule_h
 
+#define MAX_OUTPUT_EVENTS 1024
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+
 #include "quickjs.h"
 
 typedef enum er { ER_TICKS, ER_SECONDS } event_resolution;
@@ -30,6 +34,7 @@ typedef struct _sEvent {
 typedef struct _funcSched {
     event_resolution resolution;
     sEvent*  sEvents;
+    sEvent* outputs;
     size_t n_events;
     size_t capacity;
 } functionSchedule;
@@ -43,6 +48,8 @@ size_t getInsertionIndex(functionSchedule *fs, event_time time);
 bool time_gt(event_time self, event_time other, event_resolution res);
 bool time_lt(event_time self, event_time other, event_resolution res);
 bool time_eq(event_time self, event_time other, event_resolution res);
+bool time_lteq(event_time self, event_time other, event_resolution res);
+void pop(functionSchedule *fs, event_time cur_time, size_t *n_events);
 
 
 #ifdef DEBUG

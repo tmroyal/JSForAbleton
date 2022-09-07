@@ -52,6 +52,11 @@ bool testTimeSecondsComparisons(){
     s1.seconds = 2;
     TEST(time_gt(s1, s2, ER_SECONDS), "time gt");
     
+    s1.seconds = 0;
+    TEST(time_lteq(s1, s2, ER_SECONDS), "time lteq (lt)");
+    s1.seconds = 1;
+    TEST(time_lteq(s1, s2, ER_SECONDS), "time lteq (eq)");
+    
     RETURN();
 }
 
@@ -71,6 +76,11 @@ bool testTimeTicksComparisons(){
     
     s1.ticks = 2;
     TEST(time_gt(s1, s2, ER_TICKS), "time gt");
+    
+    s1.ticks = 0;
+    TEST(time_lteq(s1, s2, ER_TICKS), "time lteq (lt)");
+    s1.ticks = 1;
+    TEST(time_lteq(s1, s2, ER_TICKS), "time lteq (eq)");
     
     RETURN();
 }
@@ -142,18 +152,25 @@ bool testPopOneEv(){
     JSValue func;
     event_time t;
     bool in_order;
-    t.ticks = 0;
+    size_t n_events;
     
     PF("Test pop one ev");
     SETUP();
     
-    insertFunction(fs, func, t);
-    t.ticks = 2;
+    t.ticks = 0;
     insertFunction(fs, func, t);
     t.ticks = 1;
     insertFunction(fs, func, t);
+    t.ticks = 2;
+    insertFunction(fs, func, t);
     
-    TODO("Implement pop one tests");
+    t.ticks = 0;
+    pop(fs, t, &n_events);
+    
+    TEST(n_events == 1, "Correct number of events");
+    TEST(fs->outputs[0].time.ticks == 0, "Output event is zero");
+    TEST(fs->sEvents[0].time.ticks == 1, "First event is one");
+    TEST(fs->n_events == 2, "Correct remaining events");
     
     TEARDOWN();
     RETURN();
@@ -163,18 +180,27 @@ bool testPopTwoEv(){
     JSValue func;
     event_time t;
     bool in_order;
-    t.ticks = 0;
+    size_t n_events;
     
     PF("Test pop two ev");
     SETUP();
     
-    insertFunction(fs, func, t);
-    t.ticks = 2;
+    t.ticks = 0;
     insertFunction(fs, func, t);
     t.ticks = 1;
     insertFunction(fs, func, t);
+    t.ticks = 2;
+    insertFunction(fs, func, t);
     
-    TODO("Implement pop two tests");
+    t.ticks = 1;
+    pop(fs, t, &n_events);
+    
+    TEST(n_events == 2, "Correct number of events");
+    TEST(fs->outputs[0].time.ticks == 0, "Output event zerp == 0");
+    TEST(fs->outputs[1].time.ticks == 1, "Output event one  == 1");
+    TEST(fs->sEvents[0].time.ticks == 2, "First event is two");
+    TEST(fs->n_events == 1, "Correct remaining events");
+    
     
     TEARDOWN();
     RETURN();
@@ -192,6 +218,7 @@ bool runTests(){
         testInsert,
         testPopOneEv,
         testPopTwoEv,
+        testDropExcessEvents,
         NULL
     };
     
