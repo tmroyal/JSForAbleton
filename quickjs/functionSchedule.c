@@ -139,7 +139,7 @@ size_t getInsertionIndex(functionSchedule *fs, event_time time){
     }
 }
 
-void pop(functionSchedule *fs, event_time cur_time, size_t *n_events){
+void fs_pop(functionSchedule *fs, event_time cur_time, size_t *n_events){
     size_t n_ev_match = 0;
     sEvent* testEv = fs->sEvents + 1;
     

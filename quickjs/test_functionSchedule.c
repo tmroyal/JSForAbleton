@@ -165,7 +165,7 @@ bool testPopOneEv(){
     insertFunction(fs, func, t);
     
     t.ticks = 0;
-    pop(fs, t, &n_events);
+    fs_pop(fs, t, &n_events);
     
     TEST(n_events == 1, "Correct number of events");
     TEST(fs->outputs[0].time.ticks == 0, "Output event is zero");
@@ -193,7 +193,7 @@ bool testPopTwoEv(){
     insertFunction(fs, func, t);
     
     t.ticks = 1;
-    pop(fs, t, &n_events);
+    fs_pop(fs, t, &n_events);
     
     TEST(n_events == 2, "Correct number of events");
     TEST(fs->outputs[0].time.ticks == 0, "Output event zerp == 0");
@@ -218,7 +218,6 @@ bool runTests(){
         testInsert,
         testPopOneEv,
         testPopTwoEv,
-        testDropExcessEvents,
         NULL
     };
     
