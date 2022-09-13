@@ -50,6 +50,7 @@ bool time_lt(event_time self, event_time other, event_resolution res);
 bool time_eq(event_time self, event_time other, event_resolution res);
 bool time_lteq(event_time self, event_time other, event_resolution res);
 void fs_pop(functionSchedule *fs, event_time cur_time, size_t *n_events);
+void clearSchedule(functionSchedule *fs);
 
 
 #ifdef DEBUG

@@ -23,6 +23,26 @@ scheduler* createScheduler(t_object* time_object){
     return scheduler;
 }
 
+void clearScheduler(scheduler* sch){
+    clearSchedule(sch->secondsSchedule);
+    clearSchedule(sch->ticksSchedule);
+}
+
+void schedulerSeekTo(scheduler* sch){
+    size_t ignore;
+    double time_seconds = time_getms((t_timeobject*)sch->time_object)/1000.0;
+    long time_ticks = time_getticks((t_timeobject*)sch->time_object);
+    
+    event_time ts;
+    event_time tt;
+    
+    ts.seconds = time_seconds;
+    tt.ticks = time_ticks;
+    
+    fs_pop(sch->ticksSchedule, tt, &ignore);
+    fs_pop(sch->secondsSchedule, ts, &ignore);
+}
+
 void set_js_ctx(schedule* sch, JSContext* ctx){
     sch->js_ctx = ctx;
 }
@@ -33,26 +53,26 @@ void freeScheduler(scheduler* sch){
     free(sch);
 }
 
-void inSeconds(scheduler* sch, event_time time, JSValueConst func){
+void sch_inSeconds(scheduler* sch, event_time time, JSValueConst func){
     double current_time = time_getms((t_timeobject*)sch->time_object)/1000.0;
     double sched_time = current_time + time.seconds;
     insertFunction(sch->secondsSchedule, func, time);
 }
 
-void atSeconds(scheduler* sch, event_time time, JSValueConst func){
+void sch_atSeconds(scheduler* sch, event_time time, JSValueConst func){
     double current_time = time_getms((t_timeobject*)sch->time_object)/1000.0;
     if (time.seconds > current_time){ // event must be in future
         insertFunction(sch->secondsSchedule, func, time);
     }
 }
 
-void inTicks(scheduler* sch, event_time time, JSValueConst func){
+void sch_inTicks(scheduler* sch, event_time time, JSValueConst func){
     long current_time = time_getticks((t_timeobject*)sch->time_object)/1000.0;
     long sched_time = current_time + time.ticks;
     insertFunction(sch->secondsSchedule, func, time);
 }
 
-void atTicks(scheduler* sch, event_time time, JSValueConst func){
+void sch_atTicks(scheduler* sch, event_time time, JSValueConst func){
     long current_time = time_getticks((t_timeobject*)sch->time_object);
     if (time.ticks > current_time){
         insertFunction(sch->ticksSchedule, func, time);

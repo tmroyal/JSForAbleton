@@ -34,12 +34,16 @@ void quickjs_opendefault(t_quickjs *x);
 void quickjs_watch(t_quickjs *x, t_symbol* cmd, long argc, t_atom* argv);
 void quickjs_filechanged(t_quickjs* x, char *filename, short path);
 
+// file funcs
 void read_file(t_quickjs *x, t_symbol* filename_s);
 short set_path(t_quickjs *x, t_symbol* filename_s, short *outpath);
 void set_fqn(t_quickjs *x); // fully qualified name
 short load_file(t_quickjs *x, t_symbol* filename_s, short path);
 void set_watcher(t_quickjs *x, int status);
 void filechange(t_quickjs *x, t_symbol* s, short c, t_atom *v);
+
+// time funcs
+void quickjs_tick(t_quickjs * x);
 
 
 //////////////////////// global class pointer variable
@@ -213,6 +217,10 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
     }
 }
 
+void quickjs_tick(t_quickjs *x){
+    execute_scheduler(x->scheduler);
+}
+
 void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 {
 	t_quickjs *x = NULL;
@@ -223,6 +231,9 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     x->qjs = (struct qjs_interp*) create_interp();
     x->outlet = outlet_new((t_object*)x, NULL);
     
+    x->time_obj = (t_object*)time_new((t_object*)x, NULL, (method)quickjs_tick, TIME_FLAGS_USECLOCK);
+    x->scheduler = createScheduler((t_timeobject*)x->time_obj);
+    
     if (argc > 0 && argv[0].a_type == A_SYM){
         defer((t_object*)x, (method)read_file, atom_getsym(&argv[0]), 0, NULL);
     }
@@ -230,7 +241,11 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 	return (x);
 }
 
+
 void quickjs_free(t_quickjs *x){
+    freeScheduler(x->scheduler);
+    freeobject(x->time_obj);
+    
     destroy_interp((qjs_interp*)x->qjs);
     if (x->code_loaded){
         set_watcher(x, 0);

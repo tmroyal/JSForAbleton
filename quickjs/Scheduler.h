@@ -28,13 +28,15 @@ typedef struct _scheduler {
 
 scheduler* createScheduler(t_object* time_object);
 void freeScheduler(scheduler* sch);
+void clearScheduler(scheduler* sch);
+void schedulerSeek(scheduler* sch);
 
 void set_js_ctx(scheduler* sch, JSContext* ctx);
 
-void inSeconds(scheduler* sch, event_time time, JSValueConst func);
-void atSeconds(scheduler* sch, event_time time, JSValueConst func);
-void inTicks(scheduler* sch, event_time time, JSValueConst func);
-void atTicks(scheduler* sch, event_time time, JSValueConst func);
+void sch_inSeconds(scheduler* sch, event_time time, JSValueConst func);
+void sch_atSeconds(scheduler* sch, event_time time, JSValueConst func);
+void sch_inTicks(scheduler* sch, event_time time, JSValueConst func);
+void sch_atTicks(scheduler* sch, event_time time, JSValueConst func);
 
 void execute_scheduler(scheduler* sch); // gets time and calls an functions
 void call_output_funcs(scheduler* sch, functionSchedule* fs, size_t n, JSValueConst* args);

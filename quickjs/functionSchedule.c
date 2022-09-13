@@ -41,6 +41,10 @@ void resizeSchedule(functionSchedule* fs, size_t new_size){
     fs->sEvents = newSEvents;
 }
 
+void clearSchedule(functionSchedule* fs){
+    fs->n_events = 0; // we don't delete anything, just overwrite
+}
+
 // TODO: optimize this
 void insertFunction(functionSchedule *fs, JSValue function, event_time time){
     size_t index, i;
