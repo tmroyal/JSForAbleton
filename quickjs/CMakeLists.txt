@@ -31,12 +31,3 @@ find_library(QJS_LOC NAMES quickjs/libquickjs.a)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${QJS_LOC})
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../max-sdk-base/script/max-posttarget.cmake)
-
-add_executable(TestFS 
-	test_functionSchedule.c
-	test_functionSchedule.h
-	functionSchedule.c
-	functionSchedule.h
-)
-target_link_libraries(TestFS PRIVATE ${QJS_LOC})
-target_include_directories(TestFS PRIVATE "/usr/local/include/quickjs")

@@ -14,7 +14,6 @@
 
 #include "qjs_struct.h"
 #include "qjs_interp.h"
-#include "functionSchedule.h"
 
 ////////////////////////// object struct
 
@@ -218,7 +217,6 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
 }
 
 void quickjs_tick(t_quickjs *x){
-    execute_scheduler(x->scheduler);
 }
 
 void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
@@ -232,7 +230,6 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     x->outlet = outlet_new((t_object*)x, NULL);
     
     x->time_obj = (t_object*)time_new((t_object*)x, NULL, (method)quickjs_tick, TIME_FLAGS_USECLOCK);
-    x->scheduler = createScheduler((t_timeobject*)x->time_obj);
     
     if (argc > 0 && argv[0].a_type == A_SYM){
         defer((t_object*)x, (method)read_file, atom_getsym(&argv[0]), 0, NULL);
@@ -243,7 +240,6 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 
 
 void quickjs_free(t_quickjs *x){
-    freeScheduler(x->scheduler);
     freeobject(x->time_obj);
     
     destroy_interp((qjs_interp*)x->qjs);
