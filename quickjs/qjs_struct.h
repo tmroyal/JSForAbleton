@@ -15,8 +15,6 @@ typedef struct _quickjs
 {
     t_object    ob;
     
-    // time stuff
-    t_object* time_obj;
     
     // code stuff
     struct qjs_interp   *qjs;
@@ -32,6 +30,8 @@ typedef struct _quickjs
     
     // outlets and inlets
     void *outlet;
+    void *proxy;
+    long inlet_num;
 } t_quickjs;
 
 #endif /* qjs_struct_h */

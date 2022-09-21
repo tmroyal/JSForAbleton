@@ -33,6 +33,12 @@ void quickjs_opendefault(t_quickjs *x);
 void quickjs_watch(t_quickjs *x, t_symbol* cmd, long argc, t_atom* argv);
 void quickjs_filechanged(t_quickjs* x, char *filename, short path);
 
+
+/// Inlet messages
+void quickjs_bang(t_quickjs* x);
+void quickjs_bang_cb(t_quickjs *x, t_symbol *s, long argc, t_atom *argv);
+
+
 // file funcs
 void read_file(t_quickjs *x, t_symbol* filename_s);
 short set_path(t_quickjs *x, t_symbol* filename_s, short *outpath);
@@ -55,7 +61,9 @@ void ext_main(void *r)
     c = class_new("quickjs", (method)quickjs_new, (method)quickjs_free,
                   sizeof(t_quickjs), 0L, A_GIMME, 0);
 
-	class_addmethod(c, (method)quickjs_assist, "assist", A_CANT, 0);
+    class_addmethod(c, (method)quickjs_bang, "bang", 0);
+    
+    class_addmethod(c, (method)quickjs_assist, "assist", A_CANT, 0);
     class_addmethod(c, (method)quickjs_interpret, "interp", A_DEFSYM, 0);
     class_addmethod(c, (method)quickjs_opendefault, "open", 0);
     class_addmethod(c, (method)quickjs_opendefault, "dblclick", 0);
@@ -65,6 +73,17 @@ void ext_main(void *r)
 	class_register(CLASS_BOX, c);
     quickjs_class = c;
 }
+
+void quickjs_bang_cb(t_quickjs *x, t_symbol *s, long argc, t_atom *argv){
+    JSValue res = interp_handle_bang((qjs_interp*)x->qjs);
+    
+}
+
+void quickjs_bang(t_quickjs *x){
+    defer(x, (method)quickjs_bang_cb, NULL, 0, NULL);
+}
+
+
 
 void quickjs_opendefault(t_quickjs *x){
 #ifdef MAC_VERSION
@@ -216,8 +235,6 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
     }
 }
 
-void quickjs_tick(t_quickjs *x){
-}
 
 void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 {
@@ -228,8 +245,8 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     x->code_loaded = false;
     x->qjs = (struct qjs_interp*) create_interp();
     x->outlet = outlet_new((t_object*)x, NULL);
-    
-    x->time_obj = (t_object*)time_new((t_object*)x, NULL, (method)quickjs_tick, TIME_FLAGS_USECLOCK);
+    x->proxy = proxy_new((t_object*)x,  1, &(x->inlet_num));
+
     
     if (argc > 0 && argv[0].a_type == A_SYM){
         defer((t_object*)x, (method)read_file, atom_getsym(&argv[0]), 0, NULL);
@@ -240,7 +257,7 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 
 
 void quickjs_free(t_quickjs *x){
-    freeobject(x->time_obj);
+    freeobject(x->proxy);
     
     destroy_interp((qjs_interp*)x->qjs);
     if (x->code_loaded){

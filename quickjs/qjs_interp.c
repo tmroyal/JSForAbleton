@@ -165,6 +165,23 @@ void outlet_single(t_quickjs* obj, t_atom value){
     outlet_anything(obj->outlet, type, 1, &value);
 }
 
+JSValue interp_handle_bang(qjs_interp* interp){
+    JSValue global, bang_function;
+    
+    t_quickjs* obj = (t_quickjs*) JS_GetContextOpaque(interp->ctx);
+    
+    global = JS_GetGlobalObject(interp->ctx);
+    bang_function = JS_GetPropertyStr(interp->ctx, global, "bang");
+    
+    if (JS_IsException(bang_function)){
+        object_error((t_object*)obj, "Error on function bang()");
+    } else if (JS_IsUndefined(bang_function)){
+        object_warn((t_object*)obj, "bang() is not defined");
+    } else {
+        return JS_Call(interp->ctx, bang_function, global, 0, NULL);
+    }
+}
+
 void destroy_interp(qjs_interp* interp){
     if (interp->ctx != NULL){ JS_FreeContext(interp->ctx); }
     JS_FreeRuntime(interp->rt);

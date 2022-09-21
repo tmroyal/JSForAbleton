@@ -42,6 +42,8 @@ JSValue post_val(JSContext *ctx, int argc, JSValueConst *argv, void (*post_func)
 void print_exception(qjs_interp* interp);
 JSValue outlet(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
+JSValue interp_handle_bang(qjs_interp* interp);
+
 // RESUME HERE
 // JSValue atSeconds(JSCont
 
