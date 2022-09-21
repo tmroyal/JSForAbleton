@@ -11,7 +11,7 @@ qjs_interp* create_interp(){
     qjs_interp* interp = malloc(sizeof(qjs_interp*));
     if (interp == NULL){ return; }
     
-    interp->rt = JS_NewRuntime();
+    interp->rt = NULL; //JS_NewRuntime();
     interp->ctx = NULL;
     //post("Interp: %d\n", interp->rt == NULL);
     //post("Interp: %d\n", interp->ctx == NULL);
@@ -19,17 +19,22 @@ qjs_interp* create_interp(){
     return interp;
 }
 
-JSValue interp_code(t_quickjs* obj, qjs_interp* interp, const char* code, int len){
+void scheduled_interp(t_quickjs* obj, t_symbol *s, short argc, t_atom *argv){
     JSValue res;
-    if (len <= 0){ len = (int)strlen(code); }
+    qjs_interp *interp = (qjs_interp*)obj->qjs;
+    
     setup_context(obj, interp);
-    res = JS_Eval(interp->ctx, code, len, "<none>", JS_EVAL_TYPE_GLOBAL);
+    res = JS_Eval(interp->ctx, *(obj->code), obj->code_size, "<none>", JS_EVAL_TYPE_GLOBAL);
     
     if (JS_IsException(res)){
-        print_exception(interp);
+        print_exception((qjs_interp*)obj->qjs);
     }
     
     return res;
+}
+
+void interp_code(t_quickjs* obj, qjs_interp* interp, const char* code, int len){
+    schedule(obj, (method)scheduled_interp, 0, NULL, 0, NULL);
 }
 
 void print_exception(qjs_interp* interp){
@@ -101,6 +106,9 @@ void setup_console( qjs_interp* interp){
 
 void setup_context(t_quickjs* obj, qjs_interp* interp){
     if (interp->ctx != NULL){ JS_FreeContext(interp->ctx); }
+    if (interp->rt != NULL){ JS_FreeRuntime(interp->rt); }
+    
+    interp->rt = JS_NewRuntime();
     interp->ctx = JS_NewContext(interp->rt);
     JS_SetContextOpaque(interp->ctx, (void*)obj);
     
@@ -165,6 +173,7 @@ void outlet_single(t_quickjs* obj, t_atom value){
     outlet_anything(obj->outlet, type, 1, &value);
 }
 
+// look here for the memory leak
 JSValue interp_handle_bang(qjs_interp* interp){
     JSValue global, bang_function;
     
@@ -184,6 +193,6 @@ JSValue interp_handle_bang(qjs_interp* interp){
 
 void destroy_interp(qjs_interp* interp){
     if (interp->ctx != NULL){ JS_FreeContext(interp->ctx); }
-    JS_FreeRuntime(interp->rt);
+    if (interp->rt != NULL){ JS_FreeRuntime(interp->rt); }
     free(interp);
 }

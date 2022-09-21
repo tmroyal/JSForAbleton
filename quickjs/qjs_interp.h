@@ -28,7 +28,8 @@ typedef struct _qjs_interp {
 qjs_interp *create_interp();
 void destroy_interp(qjs_interp* interp);
 
-JSValue interp_code(t_quickjs* obj, qjs_interp* interp, const char* code, int len);
+void scheduled_interp(t_quickjs* obj, t_symbol *s, short argc, t_atom *argv);
+void interp_code(t_quickjs* obj, qjs_interp* interp, const char* code, int len);
 void outlet_single(t_quickjs* obj, t_atom value);
 
 JSValue setup_outlet(qjs_interp* interp);

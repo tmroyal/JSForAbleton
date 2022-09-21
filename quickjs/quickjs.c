@@ -80,7 +80,7 @@ void quickjs_bang_cb(t_quickjs *x, t_symbol *s, long argc, t_atom *argv){
 }
 
 void quickjs_bang(t_quickjs *x){
-    defer(x, (method)quickjs_bang_cb, NULL, 0, NULL);
+    schedule(x, (method)quickjs_bang_cb, 0, NULL, 0, NULL);
 }
 
 
@@ -123,11 +123,10 @@ void quickjs_filechanged(t_quickjs* x, char *filename, short path){
 }
 
 void filechange(t_quickjs *x, t_symbol* s, short c, t_atom *v){
-    JSValue result;
     
     if (load_file(x, gensym(x->filename), x->path)){
         x->code_size = strlen(*(x->code));
-        result = interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
+        interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
     } else {
         object_error((t_object*)x, "Error reloading file");
     }
@@ -209,8 +208,6 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
     int loadInd;
     char fqn[MAX_PATH_CHARS];
     
-    JSValue result;
-    
     // TODO: consider placing this in the file load func
     if (x->code_loaded){
         sysmem_freehandle(x->code);
@@ -231,7 +228,7 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
         
         set_fqn(x); // side effect sets fqn
         
-        result = interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
+        interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
     }
 }
 
