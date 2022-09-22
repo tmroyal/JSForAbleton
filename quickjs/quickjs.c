@@ -75,7 +75,7 @@ void ext_main(void *r)
 }
 
 void quickjs_bang_cb(t_quickjs *x, t_symbol *s, long argc, t_atom *argv){
-    JSValue res = interp_handle_bang((qjs_interp*)x->qjs);
+    interp_handle_bang((qjs_interp*)x->qjs);
     
 }
 

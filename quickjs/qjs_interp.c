@@ -174,7 +174,7 @@ void outlet_single(t_quickjs* obj, t_atom value){
 }
 
 // look here for the memory leak
-JSValue interp_handle_bang(qjs_interp* interp){
+void interp_handle_bang(qjs_interp* interp){
     JSValue global, bang_function;
     
     t_quickjs* obj = (t_quickjs*) JS_GetContextOpaque(interp->ctx);
@@ -187,8 +187,10 @@ JSValue interp_handle_bang(qjs_interp* interp){
     } else if (JS_IsUndefined(bang_function)){
         object_warn((t_object*)obj, "bang() is not defined");
     } else {
-        return JS_Call(interp->ctx, bang_function, global, 0, NULL);
+        JS_Call(interp->ctx, bang_function, global, 0, NULL);
     }
+    JS_FreeValue(interp->ctx, global);
+    JS_FreeValue(interp->ctx, bang_function);
 }
 
 void destroy_interp(qjs_interp* interp){
