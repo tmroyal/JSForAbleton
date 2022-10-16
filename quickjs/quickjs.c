@@ -69,6 +69,7 @@ void ext_main(void *r)
     class_addmethod(c, (method)quickjs_opendefault, "dblclick", 0);
     class_addmethod(c, (method)quickjs_watch, "watch", A_GIMME, 0);
     class_addmethod(c, (method)quickjs_filechanged, "filechanged", A_CANT, 0);
+    class_addmethod(c, (method)read_file, "read", A_SYM, 0);
     
 	class_register(CLASS_BOX, c);
     quickjs_class = c;
@@ -194,6 +195,15 @@ short load_file(t_quickjs *x, t_symbol* filename_s, short path){
         return;
     }
     
+    if (x->code_loaded){
+        sysmem_freehandle(x->code);
+        x->code_loaded = false;
+        x->code_size = 0;
+        x->path = 0;
+        x->filename[0] = '\0';
+        x->fqn[0] = '\0';
+    }
+    
     x->code = sysmem_newhandle(0);
     sysfile_readtextfile(fh, x->code, 0, TEXT_NULL_TERMINATE);
     sysfile_close(fh);
@@ -205,16 +215,6 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
     int loadInd;
     char fqn[MAX_PATH_CHARS];
     
-    // TODO: consider placing this in the file load func
-    if (x->code_loaded){
-        sysmem_freehandle(x->code);
-        x->code_loaded = false;
-        x->code_size = 0;
-        x->path = 0;
-        x->filename[0] = '\0';
-        x->fqn[0] = '\0';
-    }
-    
     success = set_path(x, filename_s, &path);
     
     if (success && load_file(x, filename_s, &path)){
@@ -223,9 +223,11 @@ void read_file(t_quickjs *x, t_symbol* filename_s){
         x->code_size = strlen(*(x->code));
         x->path = path;
         
-        set_fqn(x); // side effect sets fqn
+        set_fqn(x); // side effect sets x->fqn
         
         interp_code(x, (qjs_interp*)x->qjs, *(x->code), x->code_size);
+    } else {
+        object_error((t_object*)x, "Could not load: %s", filename_s->s_name);
     }
 }
 
@@ -239,8 +241,6 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     x->code_loaded = false;
     x->qjs = (struct qjs_interp*) create_interp();
     x->outlet = outlet_new((t_object*)x, NULL);
-    //x->proxy = proxy_new((t_object*)x,  1, &(x->inlet_num));
-
     
     if (argc > 0 && argv[0].a_type == A_SYM){
         defer((t_object*)x, (method)read_file, atom_getsym(&argv[0]), 0, NULL);
@@ -251,7 +251,6 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 
 
 void quickjs_free(t_quickjs *x){
-    //freeobject(x->proxy);
     
     destroy_interp((qjs_interp*)x->qjs);
     if (x->code_loaded){
