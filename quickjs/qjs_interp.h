@@ -17,7 +17,7 @@
 #include "quickjs-libc.h"
 #include "qjs_struct.h"
 #include "JSValueToTAtom.h"
-
+#include "AtomToJSValue.h"
 
 typedef struct _qjs_interp {
     JSRuntime *rt;
@@ -44,8 +44,6 @@ void print_exception(qjs_interp* interp);
 JSValue outlet(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
 void interp_handle_bang(qjs_interp* interp);
-
-// RESUME HERE
-// JSValue atSeconds(JSCont
+void interp_handle_message(t_quickjs* obj, t_symbol *s, long argc, t_atom *argv);
 
 #endif /* js_interp_h */

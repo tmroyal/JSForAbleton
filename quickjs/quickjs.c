@@ -35,8 +35,8 @@ void quickjs_filechanged(t_quickjs* x, char *filename, short path);
 
 
 /// Inlet messages
-void quickjs_bang(t_quickjs* x);
-void quickjs_bang_cb(t_quickjs *x, t_symbol *s, long argc, t_atom *argv);
+
+void quickjs_anything(t_quickjs *x, t_symbol *s, long argc, t_atom *argv);
 
 
 // file funcs
@@ -61,7 +61,7 @@ void ext_main(void *r)
     c = class_new("quickjs", (method)quickjs_new, (method)quickjs_free,
                   sizeof(t_quickjs), 0L, A_GIMME, 0);
 
-    class_addmethod(c, (method)quickjs_bang, "bang", 0);
+    class_addmethod(c, (method)quickjs_anything, "anything", A_GIMME, 0);
     
     class_addmethod(c, (method)quickjs_assist, "assist", A_CANT, 0);
     class_addmethod(c, (method)quickjs_interpret, "interp", A_DEFSYM, 0);
@@ -74,15 +74,12 @@ void ext_main(void *r)
     quickjs_class = c;
 }
 
-void quickjs_bang_cb(t_quickjs *x, t_symbol *s, long argc, t_atom *argv){
-    interp_handle_bang((qjs_interp*)x->qjs);
-    
-}
 
-void quickjs_bang(t_quickjs *x){
-    schedule(x, (method)quickjs_bang_cb, 0, NULL, 0, NULL);
+void quickjs_anything(t_quickjs *x, t_symbol *s, long argc, t_atom *argv){
+    if (x->qjs != NULL){
+        schedule((t_object*)x, (method)interp_handle_message, 0, s, (short)argc, argv);
+    }
 }
-
 
 
 void quickjs_opendefault(t_quickjs *x){
@@ -242,7 +239,7 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
     x->code_loaded = false;
     x->qjs = (struct qjs_interp*) create_interp();
     x->outlet = outlet_new((t_object*)x, NULL);
-    x->proxy = proxy_new((t_object*)x,  1, &(x->inlet_num));
+    //x->proxy = proxy_new((t_object*)x,  1, &(x->inlet_num));
 
     
     if (argc > 0 && argv[0].a_type == A_SYM){
@@ -254,7 +251,7 @@ void *quickjs_new(t_symbol *s, long argc, t_atom *argv)
 
 
 void quickjs_free(t_quickjs *x){
-    freeobject(x->proxy);
+    //freeobject(x->proxy);
     
     destroy_interp((qjs_interp*)x->qjs);
     if (x->code_loaded){

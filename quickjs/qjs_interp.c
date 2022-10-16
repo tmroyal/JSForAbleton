@@ -11,10 +11,8 @@ qjs_interp* create_interp(){
     qjs_interp* interp = malloc(sizeof(qjs_interp*));
     if (interp == NULL){ return; }
     
-    interp->rt = NULL; //JS_NewRuntime();
+    interp->rt = NULL;
     interp->ctx = NULL;
-    //post("Interp: %d\n", interp->rt == NULL);
-    //post("Interp: %d\n", interp->ctx == NULL);
     
     return interp;
 }
@@ -173,28 +171,43 @@ void outlet_single(t_quickjs* obj, t_atom value){
     outlet_anything(obj->outlet, type, 1, &value);
 }
 
-// look here for the memory leak
-void interp_handle_bang(qjs_interp* interp){
-    JSValue global, bang_function;
-    
-    t_quickjs* obj = (t_quickjs*) JS_GetContextOpaque(interp->ctx);
-    
-    global = JS_GetGlobalObject(interp->ctx);
-    bang_function = JS_GetPropertyStr(interp->ctx, global, "bang");
-    
-    if (JS_IsException(bang_function)){
-        object_error((t_object*)obj, "Error on function bang()");
-    } else if (JS_IsUndefined(bang_function)){
-        object_warn((t_object*)obj, "bang() is not defined");
-    } else {
-        JS_Call(interp->ctx, bang_function, global, 0, NULL);
-    }
-    JS_FreeValue(interp->ctx, global);
-    JS_FreeValue(interp->ctx, bang_function);
-}
-
 void destroy_interp(qjs_interp* interp){
     if (interp->ctx != NULL){ JS_FreeContext(interp->ctx); }
     if (interp->rt != NULL){ JS_FreeRuntime(interp->rt); }
     free(interp);
+}
+
+
+void interp_handle_message(t_quickjs* obj, t_symbol *s, long argc, t_atom *argv){
+    JSValue global, func;
+    JSValue args[argc];
+    qjs_interp* interp;
+    
+    interp = (qjs_interp*)obj->qjs;
+    
+    if (interp->ctx == NULL){
+        object_error((t_object*)obj, "No JS context loaded");
+        return;
+    }
+    
+    global = JS_GetGlobalObject(interp->ctx);
+    func = JS_GetPropertyStr(interp->ctx, global, s->s_name);
+    
+    if (JS_IsException(func)){
+        object_error((t_object*)obj, "Error on function %s()", s->s_name);
+    } else if (JS_IsUndefined(func)){
+        object_warn((t_object*)obj, "%s() is not defined", s->s_name);
+    } else {
+        for (size_t i = 0; i < argc; i++){
+            args[i] = AtomToJSValue(interp->ctx, argv[i]);
+        }
+        
+        JS_Call(interp->ctx, func, global, argc, args); 
+    }
+    
+    for (size_t i = 0; i < argc; i++){
+        JS_FreeValue(interp->ctx, args[i]);
+    }
+    JS_FreeValue(interp->ctx, func);
+    JS_FreeValue(interp->ctx,  global);
 }
