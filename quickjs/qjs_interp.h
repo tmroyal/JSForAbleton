@@ -15,31 +15,35 @@
 
 #include "quickjs.h"
 #include "quickjs-libc.h"
+#include "qjs_struct.h"
+#include "JSValueToTAtom.h"
+#include "AtomToJSValue.h"
 
 typedef struct _qjs_interp {
     JSRuntime *rt;
     JSContext *ctx;
 } qjs_interp;
 
-/*
- Bellard uses global variables in
- quickjs-libc when setting up a JS
- function. Be like Bellard!
- */
-t_object* glob_obj;
 
 qjs_interp *create_interp();
 void destroy_interp(qjs_interp* interp);
-void set_glob_obj(t_object* obj);
 
-JSValue interp_code(qjs_interp* interp, const char* code, int len);
+void scheduled_interp(t_quickjs* obj, t_symbol *s, short argc, t_atom *argv);
+void interp_code(t_quickjs* obj, qjs_interp* interp, const char* code, int len);
+void outlet_single(t_quickjs* obj, t_atom value);
 
-void setup_console( qjs_interp* interp );
+JSValue setup_outlet(qjs_interp* interp);
+void setup_console(qjs_interp* interp );
+void setup_context(t_quickjs* obj, qjs_interp* interp);
 
 JSValue con_log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 JSValue con_warn(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 JSValue con_error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 JSValue post_val(JSContext *ctx, int argc, JSValueConst *argv, void (*post_func)(t_object *, C74_CONST char *, ...));
+void print_exception(qjs_interp* interp);
+JSValue outlet(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv);
 
+void interp_handle_bang(qjs_interp* interp);
+void interp_handle_message(t_quickjs* obj, t_symbol *s, long argc, t_atom *argv);
 
 #endif /* js_interp_h */
